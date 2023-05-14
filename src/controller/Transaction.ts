@@ -6,43 +6,61 @@ import fs from "fs";
 import csvToJson from "csvtojson";
 import { crossOriginResourcePolicy } from "helmet";
 
-const update = (req: Request, res: Response, next: NextFunction) => {
-  var transactions = [
-    {
-      RegisterDate: "4111-11-11,1111",
-      TransactionDate: "1111-11-11,1112",
-      Name: "test",
-      Description: '"PLEASURE test"',
-      Amount: "111",
-      Balance: "11111",
-    },
-    {
-      RegisterDate: "5111-11-11,1111",
-      TransactionDate: "2111-11-11,1112",
-      Name: "test2",
-      Description: '"PLEASURE test2"',
-      Amount: "211",
-      Balance: "21111",
-    },
-    {
-      RegisterDate: "6111-11-11,1111",
-      TransactionDate: "3111-11-11,1112",
-      Name: "test3",
-      Description: '"PLEASURE test3"',
-      Amount: "311",
-      Balance: "31111",
-    },
-  ];
-  Transaction.collection
+type TransactionType = {
+  RegisterDate: string;
+  TransactionDate: string;
+  Name: string;
+  Description: string;
+  Amount: string;
+  Balance: string;
+};
+
+const update = async (req: Request, res: Response, next: NextFunction) => {
+  const csvFilePath = "src/files/testTrans.csv";
+  const json = await csvToJson().fromFile(csvFilePath);
+  const transactions: TransactionType[] = [];
+  json.forEach((jsonTrans) => {
+    const {
+      RegisterDate,
+      TransactionDate,
+      Name,
+      Description,
+      Amount,
+      Balance,
+    } = jsonTrans;
+    transactions.push(jsonTrans);
+  });
+
+  const answer = Transaction.collection
     .insertMany(transactions, {
       ordered: false,
     })
     .then(function () {
-      res.status(201).json({ message: "Data Inserted" }); // Success
+      res.status(201).json({ message: answer }); // Success
     })
     .catch(function (error) {
-      console.log(error);
       res.status(500).json({ error });
+    })
+    .finally(function () {
+      // Copying the file to a the same name
+      fs.copyFile(
+        "src/files/testTrans.csv",
+        "src/files/done/testTrans.csv",
+        (err) => {
+          if (err) {
+            console.log("Error Found:", err);
+          } else {
+            fs.unlink("src/files/testTrans.csv", (err) => {
+              if (err) {
+                throw err;
+              }
+
+              console.log("Delete File successfully.");
+            });
+            console.log("DONE");
+          }
+        }
+      );
     });
 };
 const createTransaction = (req: Request, res: Response, next: NextFunction) => {
