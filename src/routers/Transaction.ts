@@ -3,6 +3,7 @@ import controller from "../controller/Transaction";
 
 const router = express.Router();
 
+router.post("/update/", controller.update);
 router.post("/create", controller.createTransaction);
 router.get("/get/:transactionId", controller.readTransaction);
 router.get("/get/", controller.readAll);
