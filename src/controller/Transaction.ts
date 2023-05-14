@@ -34,47 +34,17 @@ const update = (req: Request, res: Response, next: NextFunction) => {
     },
   ];
   Transaction.collection
-    .insertMany(transactions)
+    .insertMany(transactions, {
+      ordered: false,
+    })
     .then(function () {
       res.status(201).json({ message: "Data Inserted" }); // Success
     })
     .catch(function (error) {
+      console.log(error);
       res.status(500).json({ error });
-      //console.log(error); // Failure
-    })
-    .finally(function () {
-      mongoose.connection.close();
-      console.log("concluded");
     });
 };
-/*
-const update = async (req: Request, res: Response, next: NextFunction) => {
-  const csvFilePath = "src/files/testTrans.csv";
-  const json = await csvToJson().fromFile(csvFilePath);
-  json.forEach((jsonTrans) => {
-    console.log(jsonTrans.Radnummer);
-    const {
-      RegisterDate,
-      TransactionDate,
-      Name,
-      Description,
-      Amount,
-      Balance,
-    } = jsonTrans;
-    const transaction = new Transaction({
-      _id: new mongoose.Types.ObjectId(),
-      RegisterDate,
-      TransactionDate,
-      Name,
-      Description,
-      Amount,
-      Balance,
-    });
-    console.log(transaction._id);
-    transaction.save();
-  });
-};
-*/
 const createTransaction = (req: Request, res: Response, next: NextFunction) => {
   const { RegisterDate, TransactionDate, Name, Description, Amount, Balance } =
     req.body;
