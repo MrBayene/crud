@@ -4,7 +4,7 @@ import Transaction from "../models/Transaction";
 import Logger from "../common/Logger";
 import fs from "fs";
 import csvToJson from "csvtojson";
-import { crossOriginResourcePolicy } from "helmet";
+import { config } from "../config/config";
 
 type TransactionType = {
   RegisterDate: string;
@@ -13,10 +13,20 @@ type TransactionType = {
   Description: string;
   Amount: string;
   Balance: string;
+  Category: string;
+};
+type Resolution = {
+  success: string[];
+  errors: TransError[];
+};
+type TransError = {
+  description: string;
+  inserted: string;
 };
 
-const update = async (req: Request, res: Response, next: NextFunction) => {
-  const csvFilePath = "src/files/testTrans.csv";
+const updateDBwithFile = async (srcFile: string, res: Resolution) => {
+  const csvFilePath = config.server.reportFolder + srcFile;
+  const doneFilePath = config.server.doneFolder + srcFile;
   const json = await csvToJson().fromFile(csvFilePath);
   const transactions: TransactionType[] = [];
   json.forEach((jsonTrans) => {
@@ -28,41 +38,62 @@ const update = async (req: Request, res: Response, next: NextFunction) => {
       Amount,
       Balance,
     } = jsonTrans;
+    console.log(jsonTrans);
+    if (!jsonTrans.Category) jsonTrans.Category = "null";
     transactions.push(jsonTrans);
   });
 
-  const answer = Transaction.collection
+  return Transaction.collection
     .insertMany(transactions, {
       ordered: false,
     })
-    .then(function () {
-      res.status(201).json({ message: answer }); // Success
+    .then((result) => {
+      Object.entries(result.insertedIds).forEach(([key, value]) => {
+        res.success.push(value.toString());
+      });
     })
-    .catch(function (error) {
-      res.status(500).json({ error });
+    .catch((error) => {
+      const msg: TransError = {
+        description: error.message,
+        inserted: error.result.insertedCount,
+      };
+      res.errors.push(msg);
     })
     .finally(function () {
       // Copying the file to a the same name
-      fs.copyFile(
-        "src/files/testTrans.csv",
-        "src/files/done/testTrans.csv",
-        (err) => {
-          if (err) {
-            console.log("Error Found:", err);
-          } else {
-            fs.unlink("src/files/testTrans.csv", (err) => {
-              if (err) {
-                throw err;
-              }
-
-              console.log("Delete File successfully.");
-            });
-            console.log("DONE");
-          }
+      fs.copyFile(csvFilePath, doneFilePath, (err) => {
+        if (err) {
+          console.log("Error Found:", err);
+        } else {
+          fs.unlink(csvFilePath, (err) => {
+            if (err) {
+              throw err;
+            }
+          });
         }
-      );
+      });
     });
 };
+
+const update = async (req: Request, res: Response, next: NextFunction) => {
+  const resolution: Resolution = {
+    success: [],
+    errors: [],
+  };
+
+  fs.readdir(config.server.reportFolder, (err, files: string[]) => {
+    files.forEach((file: string) => {
+      const answer = updateDBwithFile(file, resolution);
+    });
+  });
+  while (resolution.errors.length == 0 && resolution.success.length == 0) {
+    await new Promise((f) => setTimeout(f, 1000));
+  }
+  resolution.errors.length == 0
+    ? res.status(201).json(resolution)
+    : res.status(500).json(resolution);
+};
+
 const createTransaction = (req: Request, res: Response, next: NextFunction) => {
   const { RegisterDate, TransactionDate, Name, Description, Amount, Balance } =
     req.body;
@@ -140,6 +171,30 @@ const getDupes = (req: Request, res: Response, next: NextFunction) => {
     .catch((error) => res.status(500).json({ error }));
 };
 
+const uncategorized = (req: Request, res: Response, next: NextFunction) => {
+  //find uncategorized
+  Transaction.find({ Category: null })
+    .limit(10)
+    .then((uncategorized) => {
+      res.status(200).json(uncategorized);
+      console.log(uncategorized);
+    });
+
+  //set category
+};
+
+const categorize = (req: Request, res: Response, next: NextFunction) => {
+  Transaction.findByIdAndUpdate(
+    "60679d148fe5ed3ce091bfa7",
+    {
+      Names: "Unionen1",
+    },
+    {
+      new: true,
+    }
+  ).then((response) => res.status(200).json(response));
+};
+
 export default {
   createTransaction,
   readTransaction,
@@ -148,4 +203,6 @@ export default {
   deleteTransaction,
   getDupes,
   update,
+  uncategorized,
+  categorize,
 };

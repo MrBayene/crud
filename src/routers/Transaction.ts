@@ -10,5 +10,7 @@ router.get("/get/", controller.readAll);
 router.patch("/update/:transactionId", controller.updateTransaction);
 router.delete("/delete/:transactionId", controller.deleteTransaction);
 router.post("/getDupes/", controller.getDupes);
+router.get("/uncategorized/", controller.uncategorized);
+router.post("/categorize/", controller.categorize);
 
 export = router;
