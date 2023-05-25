@@ -1,6 +1,9 @@
 import { NextFunction, Response, Request } from "express";
 import mongoose, { Mongoose } from "mongoose";
 import Transaction from "../models/Transaction";
+import CCategory from "../controller/Category";
+import MCategory from "../models/Category";
+//import {getCategory,setCategory}from "../controller/Category";
 import Logger from "../common/Logger";
 import fs from "fs";
 import csvToJson from "csvtojson";
@@ -18,6 +21,7 @@ type TransactionType = {
 type Resolution = {
   success: string[];
   errors: TransError[];
+  cats: string[];
 };
 type TransError = {
   description: string;
@@ -29,6 +33,7 @@ const updateDBwithFile = async (srcFile: string, res: Resolution) => {
   const doneFilePath = config.server.doneFolder + srcFile;
   const json = await csvToJson().fromFile(csvFilePath);
   const transactions: TransactionType[] = [];
+
   json.forEach((jsonTrans) => {
     const {
       RegisterDate,
@@ -38,8 +43,22 @@ const updateDBwithFile = async (srcFile: string, res: Resolution) => {
       Amount,
       Balance,
     } = jsonTrans;
-    console.log(jsonTrans);
-    if (!jsonTrans.Category) jsonTrans.Category = "null";
+    if (jsonTrans.Category) {
+      CCategory.setCategory(
+        jsonTrans.Name,
+        jsonTrans.Description,
+        jsonTrans.Category
+      ).then((result) => {
+        res.cats.push(result);
+      });
+    } else {
+      const newCat = CCategory.getCategory(
+        jsonTrans.Name,
+        jsonTrans.Description
+      );
+      jsonTrans.Category = newCat;
+    }
+
     transactions.push(jsonTrans);
   });
 
@@ -53,11 +72,7 @@ const updateDBwithFile = async (srcFile: string, res: Resolution) => {
       });
     })
     .catch((error) => {
-      const msg: TransError = {
-        description: error.message,
-        inserted: error.result.insertedCount,
-      };
-      res.errors.push(msg);
+      res.errors.push(error);
     })
     .finally(function () {
       // Copying the file to a the same name
@@ -79,6 +94,7 @@ const update = async (req: Request, res: Response, next: NextFunction) => {
   const resolution: Resolution = {
     success: [],
     errors: [],
+    cats: [],
   };
 
   fs.readdir(config.server.reportFolder, (err, files: string[]) => {
@@ -86,9 +102,9 @@ const update = async (req: Request, res: Response, next: NextFunction) => {
       const answer = updateDBwithFile(file, resolution);
     });
   });
-  while (resolution.errors.length == 0 && resolution.success.length == 0) {
-    await new Promise((f) => setTimeout(f, 1000));
-  }
+  //while (resolution.errors.length == 0 && resolution.success.length == 0) {
+  await new Promise((f) => setTimeout(f, 1000));
+  //}
   resolution.errors.length == 0
     ? res.status(201).json(resolution)
     : res.status(500).json(resolution);
@@ -195,7 +211,13 @@ const categorize = (req: Request, res: Response, next: NextFunction) => {
   ).then((response) => res.status(200).json(response));
 };
 
+const createCategory = (req: Request, res: Response, next: NextFunction) => {
+  const { Name, Description, Category } = req.body;
+  res.status(503).json({ message: "Not Yet Implemented" });
+};
+
 export default {
+  createCategory,
   createTransaction,
   readTransaction,
   readAll,

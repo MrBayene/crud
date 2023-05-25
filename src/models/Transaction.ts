@@ -14,6 +14,7 @@ const TransactionSchema: Schema = new Schema(
     Description: { type: String, require: true },
     Amount: { type: String, require: true },
     Balance: { type: String, require: true },
+    Category: { type: String, require: true },
   },
   {
     versionKey: false,

@@ -12,5 +12,6 @@ router.delete("/delete/:transactionId", controller.deleteTransaction);
 router.post("/getDupes/", controller.getDupes);
 router.get("/uncategorized/", controller.uncategorized);
 router.post("/categorize/", controller.categorize);
+router.post("/newcat/", controller.createCategory);
 
 export = router;
