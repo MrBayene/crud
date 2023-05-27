@@ -1,7 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import mongoose, { Mongoose } from "mongoose";
 import Transaction from "../models/Transaction";
-import CCategory from "../controller/Category";
+import CCategory, { CategoryResult } from "../controller/Category";
 import MCategory from "../models/Category";
 //import {getCategory,setCategory}from "../controller/Category";
 import Logger from "../common/Logger";
@@ -34,7 +34,7 @@ const updateDBwithFile = async (srcFile: string, res: Resolution) => {
   const json = await csvToJson().fromFile(csvFilePath);
   const transactions: TransactionType[] = [];
 
-  json.forEach((jsonTrans) => {
+  for await (const jsonTrans of json) {
     const {
       RegisterDate,
       TransactionDate,
@@ -44,23 +44,24 @@ const updateDBwithFile = async (srcFile: string, res: Resolution) => {
       Balance,
     } = jsonTrans;
     if (jsonTrans.Category) {
-      CCategory.setCategory(
+      await CCategory.setCategory(
         jsonTrans.Name,
         jsonTrans.Description,
         jsonTrans.Category
-      ).then((result) => {
-        res.cats.push(result);
+      ).then((result: CategoryResult) => {
+        res.cats.push(result.message);
+        transactions.push(jsonTrans);
       });
     } else {
-      const newCat = CCategory.getCategory(
-        jsonTrans.Name,
-        jsonTrans.Description
+      await CCategory.getCategory(jsonTrans.Name, jsonTrans.Description).then(
+        (newCat: CategoryResult) => {
+          jsonTrans.Category = newCat.category;
+          res.cats.push(newCat.message);
+          transactions.push(jsonTrans);
+        }
       );
-      jsonTrans.Category = newCat;
     }
-
-    transactions.push(jsonTrans);
-  });
+  }
 
   return Transaction.collection
     .insertMany(transactions, {
@@ -80,11 +81,11 @@ const updateDBwithFile = async (srcFile: string, res: Resolution) => {
         if (err) {
           console.log("Error Found:", err);
         } else {
-          fs.unlink(csvFilePath, (err) => {
+          /*fs.unlink(csvFilePath, (err) => {
             if (err) {
               throw err;
             }
-          });
+          });*/
         }
       });
     });
@@ -99,12 +100,12 @@ const update = async (req: Request, res: Response, next: NextFunction) => {
 
   fs.readdir(config.server.reportFolder, (err, files: string[]) => {
     files.forEach((file: string) => {
-      const answer = updateDBwithFile(file, resolution);
+      updateDBwithFile(file, resolution);
     });
   });
-  //while (resolution.errors.length == 0 && resolution.success.length == 0) {
+
   await new Promise((f) => setTimeout(f, 1000));
-  //}
+
   resolution.errors.length == 0
     ? res.status(201).json(resolution)
     : res.status(500).json(resolution);
@@ -193,7 +194,6 @@ const uncategorized = (req: Request, res: Response, next: NextFunction) => {
     .limit(10)
     .then((uncategorized) => {
       res.status(200).json(uncategorized);
-      console.log(uncategorized);
     });
 
   //set category

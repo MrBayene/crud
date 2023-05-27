@@ -6,9 +6,31 @@ type CategoryType = {
   Description: string;
   Category: string;
 };
+export type CategoryResult = {
+  category: string;
+  message: string;
+};
 
-const getCategory = (description: string, name: string) => {
-  return MCategory.find({ Description: description, Name: name });
+const getCategory = async (description: string, name: string) => {
+  const foundCategory: CategoryResult = {
+    category: "N/A",
+    message: "N/A",
+  };
+  await MCategory.find({ Description: description, Name: name }).then(
+    (result) => {
+      console.log;
+      if (result.length > 0) {
+        foundCategory.category = (
+          result as unknown as CategoryType[]
+        )[0].Category;
+        foundCategory.message =
+          "Category " + foundCategory.category + " has been used";
+      } else {
+        foundCategory.message = "No Matching Category was found";
+      }
+    }
+  );
+  return foundCategory;
 };
 
 const setCategory = async (
@@ -22,27 +44,24 @@ const setCategory = async (
     Description: description,
     Category: category,
   });
+  const result: CategoryResult = {
+    category: "N/A",
+    message: "N/A",
+  };
   const catAsString = name + " + " + description + " => " + category;
-  let result: string =
-    catAsString +
-    " : ERROR - If you are seeing this then I dont know if the category was created or it existed already.";
-  console.log("before save");
   await newCategory
     .save()
     .then(() => {
-      console.log(" THEN");
-      result = "( " + catAsString + " ) has been added.";
+      result.category = category;
+      result.message = "( " + catAsString + " ) has been added.";
     })
     .catch((error) => {
-      console.log("CATCH");
       if (JSON.stringify(error).search("E1100")) {
-        console.log("DUPLI");
-        result = "( " + catAsString + " ) already exists.";
+        result.message = "( " + catAsString + " ) already exists.";
       } else {
         throw error;
       }
     });
-  console.log(result);
   return result;
 };
 
