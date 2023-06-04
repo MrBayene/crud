@@ -11,7 +11,7 @@ export type CategoryResult = {
   message: string;
 };
 
-const getCategory = async (description: string, name: string) => {
+export const getCategory = async (description: string, name: string) => {
   const foundCategory: CategoryResult = {
     category: "N/A",
     message: "N/A",
@@ -26,16 +26,16 @@ const getCategory = async (description: string, name: string) => {
         foundCategory.message =
           "Category " + foundCategory.category + " has been used";
       } else {
-        foundCategory.message = "No Matching Category was found";
+        foundCategory.message = "No Matching Category was found ";
       }
     }
   );
   return foundCategory;
 };
 
-const setCategory = async (
-  description: string,
+export const setCategory = async (
   name: string,
+  description: string,
   category: string
 ) => {
   const newCategory = new MCategory({

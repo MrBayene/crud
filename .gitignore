@@ -4,3 +4,5 @@ package-lock.json
 puzzels
 usefulForLater
 .env
+/.nyc_output
+/coverage

@@ -9,7 +9,7 @@ import fs from "fs";
 import csvToJson from "csvtojson";
 import { config } from "../config/config";
 
-type TransactionType = {
+export type TransactionType = {
   RegisterDate: string;
   TransactionDate: string;
   Name: string;
