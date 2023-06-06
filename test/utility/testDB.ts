@@ -43,3 +43,9 @@ export const printCats = async () =>{
    await category.find({}).then((docs)=>{console.log(JSON.stringify(docs))});
 }
 
+export const findCat= async (name: string, description: string, Category: string)=>{
+   return await category.find({Name:name,Description:description,Category:Category})
+}
+export const reset=async ()=> {
+  category.collection.drop();
+}

@@ -31,14 +31,24 @@ describe("Testing the Category Controller", () => {
   after(async () => {
     await db.closeDatabase();
   });
-it("Category already exist in both  the Transaction and Category documents -> Do nothing", async () => {
+  afterEach(async()=>{
+    await db.reset();
+  })
+it("Category already exist in both the Transaction document and Category collection -> Do nothing", async () => {
     await db.addCategory(transWithCat.Name,transWithCat.Description,transWithCat.Category);
     const before:number=await db.countCats();
     await setCategory(transWithCat.Name,transWithCat.Description,transWithCat.Category);
     const after:number=await db.countCats();
     assert.equal(before,after)
   });
-
+it("Category already exist in the Transaction document and but not Category collection -> a new category document is added to the Category collection.", async () => {
+    const before:number=await db.countCats();
+    await setCategory(transWithCat.Name,transWithCat.Description,transWithCat.Category);
+    const after:number=await db.countCats();
+    assert.equal(before+1,after)
+    const foundCat=await db.findCat(transWithCat.Name,transWithCat.Description,transWithCat.Category)
+    assert.equal(1,foundCat.length)
+  });
 });
 
 
